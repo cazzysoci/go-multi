@@ -1,0 +1,5 @@
+https://www.gov.ph|POST|1000000|
+https://www.dfa.gov.ph|POST|1000000|
+https://www.dole.gov.ph|POST|1000000|
+https://www.bir.gov.ph|POST|1000000|
+https://www.sss.gov.ph|POST|1000000|
